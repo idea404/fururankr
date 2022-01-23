@@ -32,6 +32,7 @@ class Furu(Base, MixIn):
     class Status(str, enum.Enum):
         ACTIVE = "ACTV"
         CANCELLED = "CANC"
+        ERROR = "ERRR"
 
     MIN_MONTHS_OLD = 9
     NEW_FURU_SEARCH_IN_PAST_DATE = dt.date.today() - dt.timedelta(days=14)
@@ -42,6 +43,9 @@ class Furu(Base, MixIn):
     MIN_TICKERS_PER_MONTH = 1
     MAX_TICKERS_PER_MONTH = 15
     MAX_TOTAL_TWEETS = MAX_TWEETS_PER_MONTH * 24
+    MAX_TRIAL_WINDOW_WEEKS = 3
+    MAX_FETCH_ATTEMPTS = 3
+    MIN_WEEKS_UNTIL_REACTIVATION = 2
 
     DAYS_TAKEN_TO_EXIT_POSITION = 3
     DAYS_SILENCE_FOR_POSITION_EXIT = 45
@@ -60,6 +64,9 @@ class Furu(Base, MixIn):
 
     positions: List["FuruTicker"] = relationship("FuruTicker", backref="furu")
     furu_tweets: List["FuruTweet"] = relationship("FuruTweet", backref="furu")
+    last_fetch_failure_dates: List["FuruFetchFailure"] = relationship(
+        "FuruFetchFailure", backref="furu"
+    )
 
     def __init__(
         self,
@@ -219,6 +226,36 @@ class Furu(Base, MixIn):
                 return max_date
         return Furu.FETCH_TWEET_HISTORY_CUTOFF_DATE
 
+    def register_data_fetch_fail(self):
+        logger.info(f"Registering fail data fetch date for {self}")
+        fetch_failure = FuruFetchFailure(fetch_failure_date=dt.date.today())
+        self.last_fetch_failure_dates.append(fetch_failure)
+        self.evaluate_status_for_error()
+
+    def evaluate_status_for_error(self):
+        from_date = dt.date.today() - dt.timedelta(weeks=self.MAX_TRIAL_WINDOW_WEEKS)
+        relevant_fetch_attempts = [
+            f
+            for f in self.last_fetch_failure_dates
+            if from_date <= f.fetch_failure_date
+        ]
+        if len(relevant_fetch_attempts) >= self.MAX_FETCH_ATTEMPTS:
+            logger.info(
+                f"Setting status to ERRR for {self} since failed to fetch data {len(relevant_fetch_attempts)} times"
+            )
+            self.status = Furu.Status.ERROR
+
+    def evaluate_status_activation(self):
+        most_recent_failure_date = max(
+            f.fetch_failure_date for f in self.last_fetch_failure_dates
+        )
+        time_difference = dt.date.today() - most_recent_failure_date
+        if time_difference.days >= self.MIN_WEEKS_UNTIL_REACTIVATION * 7:
+            logger.info(
+                f"Reactivating {self} as has been in error or cancelled for {time_difference.days} days"
+            )
+            self.status = Furu.Status.ACTIVE
+
 
 class Ticker(Base, MixIn):
     __tablename__ = "ticker"
@@ -325,9 +362,9 @@ class Ticker(Base, MixIn):
         logger.info(f"Registering fail data fetch date for {self}")
         fetch_failure = TickerFetchFailure(fetch_failure_date=dt.date.today())
         self.last_fetch_failure_dates.append(fetch_failure)
-        self._evaluate_status_cancellation()
+        self.evaluate_status_cancellation()
 
-    def _evaluate_status_cancellation(self):
+    def evaluate_status_cancellation(self):
         from_date = dt.date.today() - dt.timedelta(weeks=self.MAX_TRIAL_WINDOW_WEEKS)
         relevant_fetch_attempts = [
             f
@@ -642,6 +679,20 @@ class TickerFetchFailure(Base, MixIn):
     ticker_id = Column(Integer, ForeignKey("ticker.id"))
     fetch_failure_date = Column(Date, nullable=False)
     platform = Column(Text, nullable=True, server_default=text("YAHOO"))
+
+    def __init__(self, fetch_failure_date: dt.date, platform: str = None):
+        self.fetch_failure_date = fetch_failure_date
+        if platform:
+            self.platform = platform
+
+
+class FuruFetchFailure(Base, MixIn):
+    __tablename__ = "furu_fetch_failure"
+
+    id = Column(Integer, primary_key=True)
+    furu_id = Column(Integer, ForeignKey("furu.id"))
+    fetch_failure_date = Column(Date, nullable=False)
+    platform = Column(Text, nullable=True, server_default=text("TWITTER"))
 
     def __init__(self, fetch_failure_date: dt.date, platform: str = None):
         self.fetch_failure_date = fetch_failure_date

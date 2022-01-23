@@ -357,6 +357,7 @@ def update_furu_with_latest_tweets(tuple_data: (API, Furu)) -> Furu:
                 logger.error(
                     f"Failed twice while getting data for {furu}. Reason: {ex}"
                 )
+                furu.register_data_fetch_fail()
 
     return furu
 

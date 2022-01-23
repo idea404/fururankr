@@ -1,3 +1,3 @@
 TODOs
-2. add expiry attempts for fetching furu tweets
 3. create basic testing architecture
+5. configure logs to save log files in tmp

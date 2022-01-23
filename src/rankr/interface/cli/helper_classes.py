@@ -1,4 +1,6 @@
-from typing import Callable
+from typing import Callable, Optional
+
+from rankr.actions import calculates, finds, creates
 
 from rankr.interface.cli.connections import SessionConnections
 
@@ -6,8 +8,6 @@ from rankr.interface.cli.connections import SessionConnections
 class CLIActions:
     @staticmethod
     def add_furus_by_handles(conns: SessionConnections):
-        from rankr.actions import calculates
-
         handles_str = input(
             "Please type Twitter handles comma-separated (e.g. ZackMorris,DBTrades,FuruForLife)\n"
         )
@@ -23,8 +23,6 @@ class CLIActions:
             "Please type tickers separated by comma (e.g. AAPL,NFLX,TWTR)\n"
         )
         symbols = symbols_str.split(",")
-        from rankr.actions import finds
-
         finds.find_validate_create_score_furus_for_tickers(
             conns.session, conns.tweepy, symbols
         )
@@ -32,15 +30,12 @@ class CLIActions:
     @staticmethod
     def update_furu_tweets_and_raw_positions(conns: SessionConnections):
         session, tweepy = conns.session, conns.tweepy
-        from rankr.actions import finds
-
+        creates.evaluate_error_furus_reactivation(session)
         furus = finds.get_active_furus(session)
         v = input(
             f"Will update all {len(furus)} furus with new tweets and raw positions. Are you sure? (Y/N)\n"
         )
         if v.upper() == "Y":
-            from rankr.actions import calculates
-
             calculates.update_tweets_and_raw_positions_multi_threaded(
                 session, tweepy, furus
             )
@@ -53,11 +48,7 @@ class CLIActions:
             "Will attempt to update raw pricing for all raw positions in DB. Are you sure?\n"
         )
         if v.upper() == "Y":
-            from rankr.actions import creates
-
             creates.fill_prices_for_raw_furu_positions(conns.session)
-            from rankr.actions import calculates
-
             calculates.update_furu_scores_multi_threaded(conns.session)
         else:
             print("Skipped.")
@@ -119,7 +110,7 @@ class FunctionFactory:
     }
 
     @classmethod
-    def get_function(cls, input_int: int) -> Callable:
+    def get_function(cls, input_int: int) -> Optional[Callable]:
         if input_int not in cls.mapper:
             print("Input number does not match a function. Provide valid input.\n")
             return

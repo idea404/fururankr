@@ -540,8 +540,26 @@ def get_price_pending_positions(dbsess):
     return price_pending_positions
 
 
+def evaluate_error_furus_reactivation(dbsess):
+    error_furus: List[Furu] = (
+        dbsess.query(Furu).filter(Furu.status == Furu.Status.ERROR).all()
+    )
+    if error_furus:
+        logger.info(
+            f"Evaluating re-activating {len(error_furus)} furus in error"
+        )
+        reactivated_count = 0
+        for furu in error_furus:
+            furu.evaluate_status_activation()
+            if furu.status == Ticker.Status.ACTIVE:
+                reactivated_count += 1
+        logger.info(f"Reactivated {reactivated_count} tickers")
+        if reactivated_count:
+            dbsess.commit()
+
+
 def evaluate_cancelled_tickers_reactivation(dbsess):
-    cancelled_tickers = (
+    cancelled_tickers: List[Ticker] = (
         dbsess.query(Ticker).filter(Ticker.status == Ticker.Status.CANCELLED).all()
     )
     if cancelled_tickers:
