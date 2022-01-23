@@ -5,8 +5,10 @@ import yfinance as yf
 from structlog import get_logger
 
 from rankr.actions.calculates import calculate_furu_performance
-from rankr.actions.creates import (get_ticker_object_history_at_after_date,
-                                   populate_ticker_history_from_yf)
+from rankr.actions.creates import (
+    get_ticker_object_history_at_after_date,
+    populate_ticker_history_from_yf,
+)
 from rankr.db import create_db_session_from_cfg
 from rankr.db.models import Furu, FuruTicker, Ticker
 

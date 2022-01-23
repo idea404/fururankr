@@ -122,8 +122,7 @@ class CLIActions:
 
     @staticmethod
     def print_golden_portfolio(conns: SessionConnections):
-        from rankr.scripts.analytics.print_golden_portfolio import \
-            get_golden_portfolio
+        from rankr.scripts.analytics.print_golden_portfolio import get_golden_portfolio
 
         golden_folio = get_golden_portfolio(conns.session)
         print(
@@ -153,8 +152,9 @@ class CLIActions:
 
     @staticmethod
     def print_best_trades(conns: SessionConnections):
-        from rankr.scripts.analytics.print_best_trades import \
-            get_best_trades_print_string
+        from rankr.scripts.analytics.print_best_trades import (
+            get_best_trades_print_string,
+        )
 
         string = get_best_trades_print_string(conns.session)
         print(string)

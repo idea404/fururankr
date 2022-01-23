@@ -9,9 +9,12 @@ from tweepy import API
 import rankr.db
 from rankr.actions import instantiate_api_session_from_cfg
 from rankr.actions.calculates import (
-    scoped_score_furu_from_tweets, score_furu_from_tweets,
+    scoped_score_furu_from_tweets,
+    score_furu_from_tweets,
     update_furu_tweets_positions_scores_multi_threaded,
-    update_furu_with_latest_tweets, update_furu_with_latest_tweets_and_score)
+    update_furu_with_latest_tweets,
+    update_furu_with_latest_tweets_and_score,
+)
 from rankr.db.models import Furu
 
 logger = get_logger()

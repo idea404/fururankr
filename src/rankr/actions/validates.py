@@ -5,10 +5,14 @@ from sqlalchemy.orm import Session
 from structlog import get_logger
 from tweepy import API
 
-from rankr.actions.calculates import (get_furu_tweet_validation_cutoff_date,
-                                      get_new_tweets_for_handle)
-from rankr.actions.creates import (create_furu_from_twitter_user,
-                                   save_and_return_tweets_for_analysis)
+from rankr.actions.calculates import (
+    get_furu_tweet_validation_cutoff_date,
+    get_new_tweets_for_handle,
+)
+from rankr.actions.creates import (
+    create_furu_from_twitter_user,
+    save_and_return_tweets_for_analysis,
+)
 from rankr.db.models import Furu
 
 logger = get_logger()

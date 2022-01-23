@@ -1,7 +1,8 @@
 from rankr.db import create_db_session_from_cfg
 from rankr.db.models import Furu
-from rankr.scripts.update_furu_tweets_positions_and_scores import \
-    update_furu_scores_from_new_tweets
+from rankr.scripts.update_furu_tweets_positions_and_scores import (
+    update_furu_scores_from_new_tweets,
+)
 
 if __name__ == "__main__":
     dbsess = create_db_session_from_cfg(echo=False)

@@ -7,8 +7,7 @@ from rankr.db import create_db_session_from_cfg
 
 
 def get_ticker_scores_table(dbsess: Session, tickers_list: List[str]) -> pd.DataFrame:
-    from rankr.scripts.analytics.print_golden_portfolio import \
-        get_golden_portfolio
+    from rankr.scripts.analytics.print_golden_portfolio import get_golden_portfolio
 
     golden_portfolio = get_golden_portfolio(dbsess)
     return golden_portfolio[golden_portfolio.symbol.isin(tickers_list)]

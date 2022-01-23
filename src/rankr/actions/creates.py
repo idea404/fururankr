@@ -8,8 +8,15 @@ from structlog import get_logger
 from tweepy import API
 
 from rankr.actions.finds import get_nearest_business_day_in_future
-from rankr.db.models import (Furu, FuruTicker, FuruTweet, MissingHistoryError,
-                             Ticker, TickerHistory, TickerHistoryDataError)
+from rankr.db.models import (
+    Furu,
+    FuruTicker,
+    FuruTweet,
+    MissingHistoryError,
+    Ticker,
+    TickerHistory,
+    TickerHistoryDataError,
+)
 
 logger = get_logger()
 

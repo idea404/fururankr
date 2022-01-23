@@ -95,8 +95,7 @@ def find_validate_create_score_furus_for_tickers(
         if u.screen_name not in [f.handle for f in dbsess.query(Furu).all()]
     ]
 
-    from rankr.actions.validates import \
-        validate_score_create_furus_from_twitter_users
+    from rankr.actions.validates import validate_score_create_furus_from_twitter_users
 
     return validate_score_create_furus_from_twitter_users(
         dbsess, tweepy_session, all_twitter_users

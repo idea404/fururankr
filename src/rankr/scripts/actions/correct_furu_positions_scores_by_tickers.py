@@ -5,8 +5,10 @@ from sqlalchemy.orm import Session
 from structlog import get_logger
 
 from rankr.actions.calculates import calculate_furu_performance
-from rankr.actions.creates import (create_default_ticker_history,
-                                   get_ticker_object_history_at_after_date)
+from rankr.actions.creates import (
+    create_default_ticker_history,
+    get_ticker_object_history_at_after_date,
+)
 from rankr.db import create_db_session_from_cfg
 from rankr.db.models import Furu, FuruTicker, Ticker, TickerHistory
 

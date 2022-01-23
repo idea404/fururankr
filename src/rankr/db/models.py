@@ -3,8 +3,18 @@ import enum
 from typing import List, Optional
 
 import pandas as pd
-from sqlalchemy import (Column, Date, Enum, Float, ForeignKey, Integer,
-                        PickleType, Text, create_engine, text)
+from sqlalchemy import (
+    Column,
+    Date,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    PickleType,
+    Text,
+    create_engine,
+    text,
+)
 from sqlalchemy.orm import declarative_base, relationship
 from structlog import get_logger
 

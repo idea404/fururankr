@@ -7,7 +7,8 @@ from rankr.actions.calculates import calculate_furu_performance
 from rankr.actions.creates import (
     create_furu_positions_entries_exits_from_tweets,
     fill_prices_for_raw_furu_positions,
-    set_exit_dates_for_furu_unmentioned_positions)
+    set_exit_dates_for_furu_unmentioned_positions,
+)
 from rankr.db import create_db_session_from_cfg
 from rankr.db.models import Furu
 
