@@ -8,12 +8,14 @@ from sqlalchemy.orm import Session, scoped_session
 from structlog import get_logger
 from tweepy import API
 
-from rankr.actions.creates import (close_furu_position,
-                                   create_furu_from_handle,
-                                   create_or_get_furu_position,
-                                   fill_prices_for_raw_furu_positions,
-                                   save_and_return_tweets_for_analysis,
-                                   update_furu_tweets_and_create_raw_positions)
+from rankr.actions.creates import (
+    close_furu_position,
+    create_furu_from_handle,
+    create_or_get_furu_position,
+    fill_prices_for_raw_furu_positions,
+    save_and_return_tweets_for_analysis,
+    update_furu_tweets_and_create_raw_positions,
+)
 from rankr.db.models import Furu, FuruTicker, Ticker
 
 logger = get_logger()
