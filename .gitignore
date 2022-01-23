@@ -1,0 +1,7 @@
+# folders
+.idea
+src/rankr/archive
+
+# files
+setup/config.yaml
+setup/keys.yaml
