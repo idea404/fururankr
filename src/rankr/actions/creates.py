@@ -551,9 +551,9 @@ def evaluate_error_furus_reactivation(dbsess):
         reactivated_count = 0
         for furu in error_furus:
             furu.evaluate_status_activation()
-            if furu.status == Ticker.Status.ACTIVE:
+            if furu.status == Furu.Status.ACTIVE:
                 reactivated_count += 1
-        logger.info(f"Reactivated {reactivated_count} tickers")
+        logger.info(f"Reactivated {reactivated_count} furus")
         if reactivated_count:
             dbsess.commit()
 
