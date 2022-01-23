@@ -11,7 +11,6 @@ from rankr.actions.calculates import (
 )
 from rankr.actions.creates import (
     create_furu_from_twitter_user,
-    save_and_return_tweets_for_analysis,
 )
 from rankr.db.models import Furu
 
