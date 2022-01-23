@@ -239,58 +239,6 @@ def create_furu_from_handle(dbsess: Session, handle: str) -> Furu:
     return furu
 
 
-def reset_ticker_history_by_ticker_symbol(ticker_obj: Ticker) -> None:
-    period = "3y"
-    logger.info(f"Resetting (period: {period}) history for ticker ${ticker_obj.symbol}")
-    yf_ticker = yfinance.Ticker(ticker_obj.symbol)
-    yf_history = yf_ticker.history(period=period)
-    ticker = ticker_obj
-    ticker.ticker_history.clear()
-    for tup in yf_history.itertuples():
-        ticker_history = TickerHistory(
-            ticker=ticker,
-            date=tup.Index.date(),
-            high=tup.High,
-            low=tup.Low,
-            close=tup.Close,
-            open=tup.Open,
-            volume=tup.Volume,
-        )
-        ticker.ticker_history.append(ticker_history)
-    logger.info(
-        f"Done. Reset for period: "
-        f"{min(d.date() for d in yf_history.index.tolist())} "
-        f"to {max(d.date() for d in yf_history.index.tolist())}"
-    )
-
-
-def reset_furu_position_prices_by_ticker_symbol(
-    dbsess: Session, ticker_symbol: str
-) -> None:
-    ticker: Ticker = (
-        dbsess.query(Ticker).filter(Ticker.symbol == ticker_symbol).one_or_none()
-    )
-    assert ticker is not None, f"No Ticker found for symbol: {ticker_symbol}"
-    furu_positions: List[FuruTicker] = ticker.positions
-    logger.info(f"Resetting position prices for {len(furu_positions)} positions.")
-    for position in furu_positions:
-        history = get_ticker_object_history_at_after_date(ticker, position.date_entered)
-        position.price_entered = history.get_mid_price_point()
-        if position.date_closed is not None:
-            history = get_ticker_object_history_at_after_date(
-                ticker, position.date_closed
-            )
-            position.price_closed = history.get_mid_price_point()
-    logger.info(f"Done. {len(furu_positions)} positions have updated prices.")
-    furus = {fp.furu for fp in furu_positions}
-    from rankr.actions.calculates import calculate_furu_performance
-
-    for furu in furus:
-        calculate_furu_performance(furu)
-    logger.info(f"Done. Updated performance for affected furus.")
-    dbsess.commit()
-
-
 def get_ticker_object_history_at_after_date(
     ticker: Ticker, date: dt.date, yf_ticker: yfinance.Ticker = None
 ) -> Optional[TickerHistory]:
@@ -625,31 +573,3 @@ def update_furu_tweets_and_create_raw_positions(tuple_data: (API, Furu)) -> Furu
     )
 
     return furu
-
-
-def create_tickers_from_furu_tweets(session):
-    ft_ticker_symbols = get_new_ticker_symbols_from_furu_tweet(session)
-    logger.info(
-        f"Creating tickers from furu tweet for {len(ft_ticker_symbols)} ticker symbols"
-    )
-    for symbol in ft_ticker_symbols:
-        logger.info(f"Creating ticker: ${symbol}")
-        ticker_obj = Ticker(symbol=symbol)
-        session.add(ticker_obj)
-    if ft_ticker_symbols:
-        session.commit()
-
-
-def get_new_ticker_symbols_from_furu_tweet(session) -> set:
-    logger.info("Fetching new candidate ticker symbols from new Furu Tweets")
-    db_ticker_symbols_dict = {t.symbol: t for t in session.query(Ticker).all()}
-    ft_ticker_symbols = {
-        word.upper()
-        for furu in session.query(Furu).filter(Furu.status == Furu.Status.ACTIVE).all()
-        for tweet in furu.get_new_furu_tweets()
-        for word in tweet.text.split()
-        if word.startswith("$")
-        and word[1:].isalpha()
-        and word not in db_ticker_symbols_dict
-    }
-    return ft_ticker_symbols
