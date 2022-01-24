@@ -424,7 +424,7 @@ def add_ticker_and_prices_to_positions(
                 )
             except TickerHistoryMissingError as ex:
                 logger.error(
-                    f"Missing Ticker History Error found for {position}. Error: {ex}"
+                    f"Ticker History Missing Error found for {position}. Error: {ex}"
                 )
             except Exception as ex:
                 logger.error(
