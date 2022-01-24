@@ -411,7 +411,7 @@ def update_furu_scores_multi_threaded(dbsess: Session):
 
 
 def update_tweets_and_raw_positions_multi_threaded(
-    dbsess, tweepy_session, list_of_furus, db_commit_batch_size=100, workers=4
+    dbsess, tweepy_session, list_of_furus, db_commit_batch_size=100, workers=None
 ):
     logger.info(
         f"Updating tweets and raw positions for {len(list_of_furus)} furus from Twitter"
