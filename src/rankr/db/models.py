@@ -268,6 +268,7 @@ class Ticker(Base, MixIn):
     class Status(str, enum.Enum):
         ACTIVE = "ACTV"
         CANCELLED = "CANC"
+        ERROR = "ERRR"
 
     id = Column(Integer, primary_key=True)
     symbol = Column(Text, nullable=False, unique=True)
@@ -325,12 +326,12 @@ class Ticker(Base, MixIn):
             f"Missing Ticker History for {self} from date={date} to {max_day_distance} days on."
         )
 
-    def get_earliest_history_date(self) -> dt.date:
+    def get_earliest_history_date(self) -> Optional[dt.date]:
         if self.ticker_history:
             return min(history.date for history in self.ticker_history)
         return None
 
-    def get_latest_history_date(self) -> dt.date:
+    def get_latest_history_date(self) -> Optional[dt.date]:
         if self.ticker_history:
             return max(history.date for history in self.ticker_history)
         return None
@@ -362,9 +363,9 @@ class Ticker(Base, MixIn):
         logger.info(f"Registering fail data fetch date for {self}")
         fetch_failure = TickerFetchFailure(fetch_failure_date=dt.date.today())
         self.last_fetch_failure_dates.append(fetch_failure)
-        self.evaluate_status_cancellation()
+        self.evaluate_status_for_error()
 
-    def evaluate_status_cancellation(self):
+    def evaluate_status_for_error(self):
         from_date = dt.date.today() - dt.timedelta(weeks=self.MAX_TRIAL_WINDOW_WEEKS)
         relevant_fetch_attempts = [
             f
@@ -375,7 +376,7 @@ class Ticker(Base, MixIn):
             logger.info(
                 f"Cancelling {self} since failed to fetch data {len(relevant_fetch_attempts)} times"
             )
-            self.status = Ticker.Status.CANCELLED
+            self.status = Ticker.Status.ERROR
 
     def evaluate_status_activation(self):
         most_recent_failure_date = max(

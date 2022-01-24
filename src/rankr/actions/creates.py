@@ -436,7 +436,7 @@ def add_ticker_and_prices_to_positions(
 
 def fill_prices_for_raw_furu_positions(dbsess: Session) -> bool:
     """Fills position prices for raw tickers using YFinance"""
-    evaluate_cancelled_tickers_reactivation(dbsess)
+    evaluate_error_tickers_reactivation(dbsess)
 
     price_pending_positions = get_price_pending_positions(dbsess)
     if not price_pending_positions:
@@ -519,7 +519,7 @@ def delete_long_symbol_positions(dbsess, price_pending_positions):
     logger.info(f"Removed {i} positions as ticker names larger than 6 characters")
 
 
-def get_price_pending_positions(dbsess):
+def get_price_pending_positions(dbsess) -> List[FuruTicker]:
     # noinspection PyComparisonWithNone
     price_pending_positions: List[FuruTicker] = (
         dbsess.query(FuruTicker)
@@ -537,7 +537,11 @@ def get_price_pending_positions(dbsess):
         )
         .all()
     )
-    return price_pending_positions
+    error_ticker_symbols: List[str] = [
+        t.symbol for t in
+        dbsess.query(Ticker).filter(Ticker.status == Ticker.Status.ERROR).all()
+    ]
+    return [p for p in price_pending_positions if p.alpha_ticker not in error_ticker_symbols]
 
 
 def evaluate_error_furus_reactivation(dbsess):
@@ -558,16 +562,16 @@ def evaluate_error_furus_reactivation(dbsess):
             dbsess.commit()
 
 
-def evaluate_cancelled_tickers_reactivation(dbsess):
-    cancelled_tickers: List[Ticker] = (
-        dbsess.query(Ticker).filter(Ticker.status == Ticker.Status.CANCELLED).all()
+def evaluate_error_tickers_reactivation(dbsess):
+    error_tickers: List[Ticker] = (
+        dbsess.query(Ticker).filter(Ticker.status == Ticker.Status.ERROR).all()
     )
-    if cancelled_tickers:
+    if error_tickers:
         logger.info(
-            f"Evaluating re-activating {len(cancelled_tickers)} cancelled tickers"
+            f"Evaluating re-activating {len(error_tickers)} cancelled tickers"
         )
         reactivated_count = 0
-        for ticker in cancelled_tickers:
+        for ticker in error_tickers:
             ticker.evaluate_status_activation()
             if ticker.status == Ticker.Status.ACTIVE:
                 reactivated_count += 1
