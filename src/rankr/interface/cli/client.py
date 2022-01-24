@@ -12,7 +12,7 @@ class CLIClient:
         "    11. Add furus by handles\n"
         "    12. Add furus by tickers\n"
         "  Update Actions\n"
-        "    22. Update furu tweets from Twitter and raw positions db tweets\n"
+        "    22. Update furu tweets from Twitter and create raw positions\n"
         "    23. Update prices for raw positions\n"
         "  Analytics\n"
         "    31. Print Golden Portfolio\n"
