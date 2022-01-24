@@ -322,8 +322,8 @@ class Ticker(Base, MixIn):
         if histories:
             min_diff = min(histories.keys())
             return histories[min_diff]
-        raise MissingHistoryError(
-            f"Missing Ticker History for {self} from date={date} to {max_day_distance} days on."
+        raise TickerHistoryMissingError(
+            f"Ticker History has no values for {self} from date={date} to {max_day_distance} days on."
         )
 
     def get_earliest_history_date(self) -> Optional[dt.date]:
@@ -705,7 +705,7 @@ class TickerHistoryDataError(Exception):
     pass
 
 
-class MissingHistoryError(Exception):
+class TickerHistoryMissingError(Exception):
     pass
 
 

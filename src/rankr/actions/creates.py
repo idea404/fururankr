@@ -12,7 +12,7 @@ from rankr.db.models import (
     Furu,
     FuruTicker,
     FuruTweet,
-    MissingHistoryError,
+    TickerHistoryMissingError,
     Ticker,
     TickerHistory,
     TickerHistoryDataError,
@@ -422,7 +422,7 @@ def add_ticker_and_prices_to_positions(
                 logger.error(
                     f"Ticker History Data Error found for {position}. Error: {ex}"
                 )
-            except MissingHistoryError as ex:
+            except TickerHistoryMissingError as ex:
                 logger.error(
                     f"Missing Ticker History Error found for {position}. Error: {ex}"
                 )
