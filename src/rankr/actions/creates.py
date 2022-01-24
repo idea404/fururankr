@@ -438,7 +438,7 @@ def fill_prices_for_raw_furu_positions(dbsess: Session) -> bool:
     """Fills position prices for raw tickers using YFinance"""
     evaluate_error_tickers_reactivation(dbsess)
 
-    price_pending_positions = get_price_pending_positions(dbsess)
+    price_pending_positions = get_price_pending_positions_without_error_tickers(dbsess)
     if not price_pending_positions:
         return False
     logger.info(f"Gathered {len(price_pending_positions)} positions from DB")
@@ -519,7 +519,7 @@ def delete_long_symbol_positions(dbsess, price_pending_positions):
     logger.info(f"Removed {i} positions as ticker names larger than 6 characters")
 
 
-def get_price_pending_positions(dbsess) -> List[FuruTicker]:
+def get_price_pending_positions_without_error_tickers(dbsess) -> List[FuruTicker]:
     # noinspection PyComparisonWithNone
     price_pending_positions: List[FuruTicker] = (
         dbsess.query(FuruTicker)
