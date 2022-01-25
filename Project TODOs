@@ -1,4 +1,4 @@
 TODOs
-1. add error status for positions with too long names or th data/missing errors
+1. serialize adding tickers and populating furu ticker prices
 3. create basic testing architecture
 5. configure logs to save log files in tmp

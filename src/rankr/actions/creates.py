@@ -538,10 +538,12 @@ def get_price_pending_positions_without_error_tickers(dbsess) -> List[FuruTicker
         .all()
     )
     error_ticker_symbols: List[str] = [
-        t.symbol for t in
-        dbsess.query(Ticker).filter(Ticker.status == Ticker.Status.ERROR).all()
+        t.symbol
+        for t in dbsess.query(Ticker).filter(Ticker.status == Ticker.Status.ERROR).all()
     ]
-    return [p for p in price_pending_positions if p.alpha_ticker not in error_ticker_symbols]
+    return [
+        p for p in price_pending_positions if p.alpha_ticker not in error_ticker_symbols
+    ]
 
 
 def evaluate_error_furus_reactivation(dbsess):
@@ -549,9 +551,7 @@ def evaluate_error_furus_reactivation(dbsess):
         dbsess.query(Furu).filter(Furu.status == Furu.Status.ERROR).all()
     )
     if error_furus:
-        logger.info(
-            f"Evaluating re-activating {len(error_furus)} furus in error"
-        )
+        logger.info(f"Evaluating re-activating {len(error_furus)} furus in error")
         reactivated_count = 0
         for furu in error_furus:
             furu.evaluate_status_activation()
@@ -567,9 +567,7 @@ def evaluate_error_tickers_reactivation(dbsess):
         dbsess.query(Ticker).filter(Ticker.status == Ticker.Status.ERROR).all()
     )
     if error_tickers:
-        logger.info(
-            f"Evaluating re-activating {len(error_tickers)} cancelled tickers"
-        )
+        logger.info(f"Evaluating re-activating {len(error_tickers)} cancelled tickers")
         reactivated_count = 0
         for ticker in error_tickers:
             ticker.evaluate_status_activation()
