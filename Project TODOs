@@ -1,3 +1,4 @@
 TODOs
+1. Use OAuth 2.0 to speed up tweet gathering job
 2. figure how to handle positions where data can not be found
 5. configure logs to save log files in tmp
