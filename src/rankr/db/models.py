@@ -260,6 +260,7 @@ class Furu(Base, MixIn):
 class Ticker(Base, MixIn):
     __tablename__ = "ticker"
 
+    MINIMUM_OTC_PRICE = 0.0001
     MINIMUM_PRICE = 0.00001
     MAX_FETCH_ATTEMPTS = 3
     MAX_TRIAL_WINDOW_WEEKS = 8
@@ -350,10 +351,10 @@ class Ticker(Base, MixIn):
             for tup in yf_history_tuples:
                 ticker_history = TickerHistory(
                     date=tup.Index.date(),
-                    high=tup.High,
-                    low=tup.Low,
-                    close=tup.Close,
-                    open=tup.Open,
+                    high=tup.High if tup.High > self.MINIMUM_OTC_PRICE else self.MINIMUM_OTC_PRICE,
+                    low=tup.Low if tup.Low > self.MINIMUM_OTC_PRICE else self.MINIMUM_OTC_PRICE,
+                    close=tup.Close if tup.Close > self.MINIMUM_OTC_PRICE else self.MINIMUM_OTC_PRICE,
+                    open=tup.Open if tup.Open > self.MINIMUM_OTC_PRICE else self.MINIMUM_OTC_PRICE,
                     volume=tup.Volume,
                 )
                 self.ticker_history.append(ticker_history)

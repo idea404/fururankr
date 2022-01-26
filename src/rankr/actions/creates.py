@@ -1,4 +1,3 @@
-import concurrent.futures as cf
 import datetime as dt
 from typing import Dict, List, Optional
 
@@ -35,10 +34,10 @@ def populate_ticker_history_from_yf(ticker: Ticker, yf_history: pd.DataFrame):
     for tup in yf_history_tuples:
         ticker_history = TickerHistory(
             date=tup.Index.date(),
-            high=tup.High,
-            low=tup.Low,
-            close=tup.Close,
-            open=tup.Open,
+            high=tup.High if tup.High > Ticker.MINIMUM_OTC_PRICE else Ticker.MINIMUM_OTC_PRICE,
+            low=tup.Low if tup.Low > Ticker.MINIMUM_OTC_PRICE else Ticker.MINIMUM_OTC_PRICE,
+            close=tup.Close if tup.Close > Ticker.MINIMUM_OTC_PRICE else Ticker.MINIMUM_OTC_PRICE,
+            open=tup.Open if tup.Open > Ticker.MINIMUM_OTC_PRICE else Ticker.MINIMUM_OTC_PRICE,
             volume=tup.Volume,
         )
         ticker.ticker_history.append(ticker_history)
