@@ -134,6 +134,8 @@ def create_furu_from_twitter_user(dbsess: Session, user) -> Furu:
         logger.info(f"Fetched {furu}")
         return furu
     furu = Furu(handle=user.screen_name)
+    if user.furu_tweets:
+        add_new_tweets_to_furu_tweets(furu, user.furu_tweets)
     dbsess.add(furu)
     dbsess.commit()
     logger.info(f"Created {furu}")
