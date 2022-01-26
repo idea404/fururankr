@@ -25,7 +25,7 @@ def find_candidate_furus_for_ticker(tweepy_session, ticker_string) -> List[User]
     cash_ticker = "$" + ticker_string
     tweets = [
         tweet
-        for tweet in tweepy.Cursor(tweepy_session.search, **{"q": cash_ticker}).items(
+        for tweet in tweepy.Cursor(tweepy_session.search_tweets, **{"q": cash_ticker}).items(
             1000
         )
     ]
@@ -40,7 +40,7 @@ def find_candidate_furus_for_ticker(tweepy_session, ticker_string) -> List[User]
             possible_tweets = [
                 tweet
                 for tweet in tweepy.Cursor(
-                    tweepy_session.search,
+                    tweepy_session.search_tweets,
                     **{"q": cash_ticker, "until": min_date.strftime("%Y-%m-%d")},
                 ).items(1000)
             ]

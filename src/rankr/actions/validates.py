@@ -19,7 +19,7 @@ logger = get_logger()
 
 def validate_twitter_user(dbsess: Session, tweepy_session: API, twitter_user):
     logger.info(f"Validating Twitter User: @{twitter_user.screen_name}")
-    furu_age_in_months = (dt.datetime.now() - twitter_user.created_at).days / 30.5
+    furu_age_in_months = (dt.datetime.now().replace(tzinfo=dt.timezone.utc)  - twitter_user.created_at).days / 30.5
     is_old_enough = furu_age_in_months > Furu.MIN_MONTHS_OLD
     db_furu = (
         dbsess.query(Furu).filter(Furu.handle == twitter_user.screen_name).one_or_none()
@@ -87,7 +87,7 @@ def validate_score_create_furus_from_twitter_users(
                 dbsess, tweepy_session, twitter_user
             )
         except Exception as ex:
-            logger.error(
+            logger.exception(
                 f"Could not validate candidate Twitter FURU User: {twitter_user}. Reason: {ex}"
             )
         if valid_twitter_user is not None:
