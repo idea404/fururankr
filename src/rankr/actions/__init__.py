@@ -16,12 +16,6 @@ def load_var_from_config(service: str, var_name: str) -> str:
 
 
 def instantiate_api_session_from_cfg() -> API:
-    auth = tweepy.OAuthHandler(
-        load_var_from_config("twitter", "API"),
-        load_var_from_config("twitter", "Secret"),
-    )
-    auth.set_access_token(
-        load_var_from_config("twitter", "access_token"),
-        load_var_from_config("twitter", "access_token_secret"),
-    )
+    bearer = load_var_from_config("twitter", "Bearer")
+    auth = tweepy.OAuth2BearerHandler(bearer)
     return tweepy.API(auth, wait_on_rate_limit=True, retry_count=3, retry_delay=30)
