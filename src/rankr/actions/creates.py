@@ -476,19 +476,16 @@ def fill_prices_for_raw_furu_positions(session: Session) -> bool:
         session, price_pending_positions_dict, prices
     )
 
-    fill_position_prices_from_df_multi_threaded(
-        session, price_pending_positions_dict, ticker_objects_list
-    )
+    fill_position_prices_from_df_serial(session, price_pending_positions_dict, ticker_objects_list)
 
     return True
 
 
-def fill_position_prices_from_df_multi_threaded(
+def fill_position_prices_from_df_serial(
     session,
     price_pending_positions_dict,
     ticker_objects_list,
     db_commit_batch_size=50,
-    workers=None,
 ):
     parallel_data = [
         (
@@ -503,11 +500,8 @@ def fill_position_prices_from_df_multi_threaded(
 
     i, j = 0, db_commit_batch_size
     while parallel_data[i:]:
-        with cf.ProcessPoolExecutor(max_workers=workers) as exe:
-            exe.map(
-                assign_prices_to_positions_from_ticker_obj,
-                parallel_data[i:j],
-            )
+        for ticker_obj, relevant_positions in parallel_data[i:j]:
+            add_ticker_and_prices_to_positions(ticker_obj, relevant_positions)
         session.commit()
         i, j = j, j + db_commit_batch_size
 

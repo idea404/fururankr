@@ -2,11 +2,13 @@ import collections
 import datetime as dt
 import unittest
 
-import numpy as np
-import pandas as pd
-
-from rankr.actions.creates import fill_position_prices_from_df_multi_threaded
-from rankr.db.models import Ticker, FuruTicker, Furu, TickerHistoryMissingError, TickerHistoryDataError
+from rankr.actions.creates import fill_position_prices_from_df_serial
+from rankr.db.models import (
+    Ticker,
+    FuruTicker,
+    Furu,
+    TickerHistory,
+)
 from tests.mocks.base import MockSession
 
 
@@ -84,62 +86,50 @@ class TestCreatesFunctions(unittest.TestCase):
         for pos in positions:
             pppd[pos.ticker_symbol].append(pos)
 
-        d = dict()
-        d["XVDR"] = pd.DataFrame(
-            columns=["Date", "Open", "High", "Low", "Close", "Volume"],
-            data=[
-                [dt.datetime(2021, 1, 20), 1.1, 1.2, 1, 1.1, 12],
-            ],
-        ).set_index("Date")
-        d["GGGM"] = pd.DataFrame(
-            columns=["Date", "Open", "High", "Low", "Close", "Volume"],
-            data=[
-                [dt.datetime(2021, 3, 9), 99, 101, 80, 99, 122],
-                [dt.datetime(2021, 5, 20), 99.8, 101.10, 98.1, 101, 222],
-            ],
-        ).set_index("Date")
-        d["LAPK"] = pd.DataFrame(
-            columns=["Date", "Open", "High", "Low", "Close", "Volume"],
-            data=[
-                [np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN],
-            ],
-        ).set_index("Date")
-        d["BNMM"] = pd.DataFrame(
-            columns=["Date", "Open", "High", "Low", "Close", "Volume"],
-            data=[
-                [np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN],
-            ],
-        ).set_index("Date")
-        d["XDDR"] = pd.DataFrame(
-            columns=["Date", "Open", "High", "Low", "Close", "Volume"],
-            data=[
-                [np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN],
-            ],
-        ).set_index("Date")
-        d["GCGM"] = pd.DataFrame(
-            columns=["Date", "Open", "High", "Low", "Close", "Volume"],
-            data=[
-                [np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN],
-            ],
-        ).set_index("Date")
-        d["LQPK"] = pd.DataFrame(
-            columns=["Date", "Open", "High", "Low", "Close", "Volume"],
-            data=[
-                [np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN],
-            ],
-        ).set_index("Date")
-        d["BCMM"] = pd.DataFrame(
-            columns=["Date", "Open", "High", "Low", "Close", "Volume"],
-            data=[
-                [np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN],
-            ],
-        ).set_index("Date")
-        d = pd.concat(d, axis=1)
+        tol = [
+            Ticker("XVDR"),
+            Ticker("GGGM"),
+            Ticker("LAPK"),
+            Ticker("BNMM"),
+            Ticker("XDDR"),
+            Ticker("GCGM"),
+            Ticker("LQPK"),
+            Ticker("BCMM"),
+        ]
 
-        fill_position_prices_from_df_multi_threaded(self.session, pppd, d)
+        tol[0].ticker_history.append(
+            TickerHistory(
+                date=dt.date(2021, 1, 20),
+                open=1.1,
+                close=1.1,
+                high=1.1,
+                low=1.1,
+                volume=122,
+            )
+        )
 
-        expected_created_ticker_symbols = d.columns.levels[0].to_list()
-        self.assertEqual(expected_created_ticker_symbols.sort(), [t.symbol for t in self.session.objects_in_db].sort())
+        tol[1].ticker_history.extend(
+            [
+                TickerHistory(
+                    date=dt.date(2021, 5, 20),
+                    open=100.4,
+                    close=100.4,
+                    high=1.1,
+                    low=1.1,
+                    volume=122,
+                ),
+                TickerHistory(
+                    date=dt.date(2021, 3, 9),
+                    open=99,
+                    close=99,
+                    high=1.1,
+                    low=1.1,
+                    volume=122,
+                ),
+            ]
+        )
+
+        fill_position_prices_from_df_serial(self.session, pppd, tol)
 
         self.assertEqual(dt.date(2021, 1, 20), positions[0].date_entered)
         self.assertEqual(1.1, positions[0].price_entered)
