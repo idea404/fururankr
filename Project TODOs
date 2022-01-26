@@ -1,4 +1,4 @@
 TODOs
-1. serialize adding tickers and populating furu ticker prices
+2. figure how to handle positions where data can not be found
 3. create basic testing architecture
 5. configure logs to save log files in tmp

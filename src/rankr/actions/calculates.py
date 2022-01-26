@@ -1,3 +1,4 @@
+import concurrent.futures as cf
 import datetime as dt
 import time
 from typing import Dict, List, Optional, Tuple
@@ -17,6 +18,7 @@ from rankr.actions.creates import (
     update_furu_tweets_and_create_raw_positions,
 )
 from rankr.db.models import Furu, FuruTicker, Ticker
+
 
 logger = get_logger()
 
@@ -402,8 +404,6 @@ def update_furu_tweets_positions_scores_multi_threaded(
 
 
 def update_furu_scores_multi_threaded(dbsess: Session):
-    import concurrent.futures as cf
-
     furus = dbsess.query(Furu).filter(Furu.status == Furu.Status.ACTIVE).all()
     logger.info(f"Updating scores for {len(furus)} furus closed positions")
     with cf.ThreadPoolExecutor() as exe:
@@ -416,8 +416,6 @@ def update_tweets_and_raw_positions_multi_threaded(
     logger.info(
         f"Updating tweets and raw positions for {len(list_of_furus)} furus from Twitter"
     )
-    import concurrent.futures as cf
-
     parallel_data = [(tweepy_session, furu) for furu in list_of_furus]
     i, j = 0, db_commit_batch_size
     while parallel_data[i:]:

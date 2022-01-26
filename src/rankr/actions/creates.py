@@ -1,3 +1,4 @@
+import concurrent.futures as cf
 import datetime as dt
 from typing import Dict, List, Optional
 
@@ -17,6 +18,7 @@ from rankr.db.models import (
     TickerHistory,
     TickerHistoryDataError,
 )
+
 
 logger = get_logger()
 
@@ -88,7 +90,16 @@ def create_ticker_if_new_from_symbol_and_df(
         logger.info(f"Creating ticker: ${symbol}")
         ticker_obj = Ticker(symbol=symbol)
         dbsess.add(ticker_obj)
-    ticker_obj.add_df_to_history(yf_dataframe)
+
+    failed_to_fetch = (
+        yf_dataframe.Close.isnull().all() and yf_dataframe.Open.isnull().all()
+    )
+    if failed_to_fetch:
+        logger.warning(f"No Open/Close data for ${ticker_obj.symbol}.")
+        ticker_obj.register_data_fetch_fail()
+        return ticker_obj
+    if not yf_dataframe.empty:
+        ticker_obj.add_df_to_history(yf_dataframe)
 
     return ticker_obj
 
@@ -400,6 +411,9 @@ def create_raw_furu_positions_with_new_tweets(furu: Furu) -> bool:
 def add_ticker_and_prices_to_positions(
     ticker_obj: Ticker, relevant_positions: List[FuruTicker]
 ) -> List[FuruTicker]:
+    logger.info(
+        f"Assigning prices for {len(relevant_positions)} raw positions in {ticker_obj}"
+    )
     for position in relevant_positions:
         position.ticker = ticker_obj
         if position.is_not_in_future:
@@ -458,40 +472,73 @@ def fill_prices_for_raw_furu_positions(dbsess: Session) -> bool:
         group_by="symbol",
     )
 
-    fill_position_prices_from_df(dbsess, price_pending_positions_dict, prices)
+    fill_position_prices_from_df_multi_threaded(
+        dbsess, price_pending_positions_dict, prices
+    )
 
     return True
 
 
-def fill_position_prices_from_df(
-    dbsess, price_pending_positions_dict, prices_by_symbol_df
+def fill_position_prices_from_df_multi_threaded(
+    session,
+    price_pending_positions_dict,
+    prices_by_symbol_df,
+    db_commit_batch_size=50,
+    workers=None,
 ):
-    existing_db_tickers_dict = {t.symbol: t for t in dbsess.query(Ticker).all()}
-    for symbol in price_pending_positions_dict.keys():
-        relevant_positions = price_pending_positions_dict[symbol]
-        logger.info(
-            f"Filling price data for {len(relevant_positions)} raw positions in {symbol}"
+    ticker_objects_list = get_or_create_tickers_from_positions_dict_with_prices_df(
+        session, price_pending_positions_dict, prices_by_symbol_df
+    )
+
+    parallel_data = [
+        (
+            ticker_obj,
+            price_pending_positions_dict.get(ticker_obj.symbol, []),
         )
-        try:
-            failed_to_fetch = False
-            if (
-                prices_by_symbol_df[symbol].Close.isnull().all()
-                and prices_by_symbol_df[symbol].Open.isnull().all()
-            ):
-                logger.warning(
-                    f"No data for ${symbol} on YFinance for {len(relevant_positions)} positions."
-                )
-                failed_to_fetch = True
-            ticker_obj = create_ticker_if_new_from_symbol_and_df(
-                dbsess, symbol, prices_by_symbol_df[symbol], existing_db_tickers_dict
+        for ticker_obj in ticker_objects_list
+    ]
+    logger.info(
+        f"Filling price data for raw positions in {len(price_pending_positions_dict.keys())} tickers"
+    )
+
+    i, j = 0, db_commit_batch_size
+    while parallel_data[i:]:
+        with cf.ThreadPoolExecutor(max_workers=workers) as exe:
+            exe.map(
+                assign_prices_to_positions_from_ticker_obj,
+                parallel_data[i:j],
             )
-            if failed_to_fetch:
-                ticker_obj.register_data_fetch_fail()
-            if not failed_to_fetch:
-                add_ticker_and_prices_to_positions(ticker_obj, relevant_positions)
-            dbsess.commit()
-        except Exception as ex:
-            logger.error(f"Failed to add prices to {symbol}. Reason: {ex}")
+        session.commit()
+        i, j = j, j + db_commit_batch_size
+
+
+def get_or_create_tickers_from_positions_dict_with_prices_df(
+    session, price_pending_positions_dict, prices_by_symbol_df, commit_batch_size=100
+):
+    logger.info(
+        f"Evaluating whether to create new tickers from {len(price_pending_positions_dict)} symbols"
+    )
+    existing_db_tickers_dict = {t.symbol: t for t in session.query(Ticker).all()}
+    ticker_objects_list = []
+    for i, symbol in enumerate(price_pending_positions_dict.keys()):
+        ticker_objects_list.append(
+            create_ticker_if_new_from_symbol_and_df(
+                session, symbol, prices_by_symbol_df[symbol], existing_db_tickers_dict
+            )
+        )
+        if i > 0 and i % commit_batch_size == 0:
+            session.commit()
+    if price_pending_positions_dict:
+        session.commit()
+
+    return ticker_objects_list
+
+
+def assign_prices_to_positions_from_ticker_obj(
+    tuple_data: tuple[Ticker, list[FuruTicker]]
+):
+    ticker_obj, relevant_positions = tuple_data
+    add_ticker_and_prices_to_positions(ticker_obj, relevant_positions)
 
 
 def get_positions_dict_from_positions_list(price_pending_positions):
