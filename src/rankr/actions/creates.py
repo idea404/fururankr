@@ -448,16 +448,16 @@ def add_ticker_and_prices_to_positions(
     return relevant_positions
 
 
-def fill_prices_for_raw_furu_positions(dbsess: Session) -> bool:
+def fill_prices_for_raw_furu_positions(session: Session) -> bool:
     """Fills position prices for raw tickers using YFinance"""
-    evaluate_error_tickers_reactivation(dbsess)
+    evaluate_error_tickers_reactivation(session)
 
-    price_pending_positions = get_price_pending_positions_without_error_tickers(dbsess)
+    price_pending_positions = get_price_pending_positions_without_error_tickers(session)
     if not price_pending_positions:
         return False
     logger.info(f"Gathered {len(price_pending_positions)} positions from DB")
 
-    delete_long_symbol_positions(dbsess, price_pending_positions)
+    delete_long_symbol_positions(session, price_pending_positions)
 
     price_pending_positions_dict = get_positions_dict_from_positions_list(
         price_pending_positions
@@ -472,8 +472,12 @@ def fill_prices_for_raw_furu_positions(dbsess: Session) -> bool:
         group_by="symbol",
     )
 
+    ticker_objects_list = get_or_create_tickers_from_positions_dict_with_prices_df(
+        session, price_pending_positions_dict, prices
+    )
+
     fill_position_prices_from_df_multi_threaded(
-        dbsess, price_pending_positions_dict, prices
+        session, price_pending_positions_dict, ticker_objects_list
     )
 
     return True
@@ -482,14 +486,10 @@ def fill_prices_for_raw_furu_positions(dbsess: Session) -> bool:
 def fill_position_prices_from_df_multi_threaded(
     session,
     price_pending_positions_dict,
-    prices_by_symbol_df,
+    ticker_objects_list,
     db_commit_batch_size=50,
     workers=None,
 ):
-    ticker_objects_list = get_or_create_tickers_from_positions_dict_with_prices_df(
-        session, price_pending_positions_dict, prices_by_symbol_df
-    )
-
     parallel_data = [
         (
             ticker_obj,
@@ -503,7 +503,7 @@ def fill_position_prices_from_df_multi_threaded(
 
     i, j = 0, db_commit_batch_size
     while parallel_data[i:]:
-        with cf.ThreadPoolExecutor(max_workers=workers) as exe:
+        with cf.ProcessPoolExecutor(max_workers=workers) as exe:
             exe.map(
                 assign_prices_to_positions_from_ticker_obj,
                 parallel_data[i:j],
