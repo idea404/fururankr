@@ -17,6 +17,7 @@ from rankr.actions.creates import (
     save_and_return_tweets_for_analysis,
     update_furu_tweets_and_create_raw_positions,
 )
+from rankr.db import scoped_session_context_manager
 from rankr.db.models import Furu, FuruTicker, Ticker
 
 
@@ -386,21 +387,25 @@ def add_and_score_furu_from_handle(
 
 def update_furu_tweets_positions_scores_multi_threaded(
     tweepy_session: API,
-    dbsess: Session,
-    list_of_furus: List[Furu],
-    db_commit_batch_size=100,
+    scoped_session_class: scoped_session,
+    list_of_furu_ids: List[int],
     workers=4,
 ) -> List[Furu]:
     """Fast-performing function for bulk update of Furu data"""
     update_tweets_and_raw_positions_multi_threaded(
-        dbsess, tweepy_session, list_of_furus, db_commit_batch_size, workers
+        scoped_session_class=scoped_session_class,
+        tweepy_session=tweepy_session,
+        list_of_furu_ids=list_of_furu_ids,
+        workers=workers,
     )
-    # gather all positions that need price data and fetch and save it
-    fill_prices_for_raw_furu_positions(dbsess)
-    # score furus
-    update_furu_scores_multi_threaded(dbsess)
 
-    return list_of_furus
+    with scoped_session_context_manager(scoped_session_class) as session:
+        # gather all positions that need price data and fetch and save it
+        fill_prices_for_raw_furu_positions(session)
+        # score furus
+        update_furu_scores_multi_threaded(session)
+
+    return list_of_furu_ids
 
 
 def update_furu_scores_multi_threaded(dbsess: Session):
@@ -411,15 +416,13 @@ def update_furu_scores_multi_threaded(dbsess: Session):
 
 
 def update_tweets_and_raw_positions_multi_threaded(
-    dbsess, tweepy_session, list_of_furus, db_commit_batch_size=100, workers=None
+    scoped_session_class, tweepy_session, list_of_furu_ids, workers=None
 ):
     logger.info(
-        f"Updating tweets and raw positions for {len(list_of_furus)} furus from Twitter"
+        f"Updating tweets and raw positions for {len(list_of_furu_ids)} furus from Twitter"
     )
-    parallel_data = [(tweepy_session, furu) for furu in list_of_furus]
-    i, j = 0, db_commit_batch_size
-    while parallel_data[i:]:
-        with cf.ThreadPoolExecutor(max_workers=workers) as exe:
-            exe.map(update_furu_tweets_and_create_raw_positions, parallel_data[i:j])
-        dbsess.commit()
-        i, j = j, j + db_commit_batch_size
+    parallel_data = [
+        (scoped_session_class, tweepy_session, furu_id) for furu_id in list_of_furu_ids
+    ]
+    with cf.ThreadPoolExecutor(max_workers=workers) as exe:
+        exe.map(update_furu_tweets_and_create_raw_positions, parallel_data)

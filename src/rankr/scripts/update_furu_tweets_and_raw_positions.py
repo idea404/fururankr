@@ -7,12 +7,18 @@ if __name__ == "__main__":
     Session = create_db_scoped_session()
     session = Session()
     tweepy = instantiate_api_session_from_cfg()
-    furus = session.query(Furu).filter(Furu.status == Furu.Status.ACTIVE).all()
+    furu_id_list = [f.id for f in session.query(Furu).filter(Furu.status == Furu.Status.ACTIVE).all()]
 
     v = input(
-        f"Will update {len(furus)} furus with new tweets and raw positions. Are you sure? (Y/N)\n"
+        f"Will update {len(furu_id_list)} furus with new tweets and raw positions. Are you sure? (Y/N)\n"
     )
     if v.upper() == "Y":
-        update_tweets_and_raw_positions_multi_threaded(session, tweepy, furus)
+        update_tweets_and_raw_positions_multi_threaded(
+            scoped_session_class=Session,
+            tweepy_session=tweepy,
+            list_of_furu_ids=furu_id_list,
+        )
     else:
         print("Skipped.")
+
+    Session.remove()

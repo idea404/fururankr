@@ -1,7 +1,7 @@
 from typing import Callable, Optional
 
 from rankr.actions import calculates, finds, creates
-
+from rankr.db import scoped_session_context_manager
 from rankr.interface.cli.connections import SessionConnections
 
 
@@ -12,10 +12,9 @@ class CLIActions:
             "Please type Twitter handles comma-separated (e.g. ZackMorris,DBTrades,FuruForLife)\n"
         )
         handles = [h.strip() for h in handles_str.split(",")]
-        for handle in handles:
-            calculates.add_and_score_furu_from_handle(
-                conns.session, conns.tweepy, handle
-            )
+        with scoped_session_context_manager(conns.scoped_session_class) as session:
+            for handle in handles:
+                calculates.add_and_score_furu_from_handle(session, conns.tweepy, handle)
 
     @staticmethod
     def add_furus_by_ticker_symbols(conns: SessionConnections):
@@ -23,21 +22,24 @@ class CLIActions:
             "Please type tickers separated by comma (e.g. AAPL,NFLX,TWTR)\n"
         )
         symbols = symbols_str.split(",")
-        finds.find_validate_create_score_furus_for_tickers(
-            conns.session, conns.tweepy, symbols
-        )
+        with scoped_session_context_manager(conns.scoped_session_class) as session:
+            finds.find_validate_create_score_furus_for_tickers(
+                session, conns.tweepy, symbols
+            )
 
     @staticmethod
     def update_furu_tweets_and_raw_positions(conns: SessionConnections):
-        session, tweepy = conns.session, conns.tweepy
-        creates.evaluate_error_furus_reactivation(session)
-        furus = finds.get_active_furus(session)
+        scoped_session, tweepy = conns.scoped_session_class, conns.tweepy
+        with scoped_session_context_manager(scoped_session) as session:
+            creates.evaluate_error_furus_reactivation(session)
+            furu_id_list = finds.get_active_furu_ids(session)
+
         v = input(
-            f"Will update all {len(furus)} furus with new tweets and raw positions. Are you sure? (Y/N)\n"
+            f"Will update all {len(furu_id_list)} furus with new tweets and raw positions. Are you sure? (Y/N)\n"
         )
         if v.upper() == "Y":
             calculates.update_tweets_and_raw_positions_multi_threaded(
-                session, tweepy, furus
+                scoped_session, tweepy, furu_id_list
             )
         else:
             print("Skipped.")
@@ -48,8 +50,9 @@ class CLIActions:
             "Will attempt to update raw pricing for all raw positions in DB. Are you sure?\n"
         )
         if v.upper() == "Y":
-            creates.fill_prices_for_raw_furu_positions(conns.session)
-            calculates.update_furu_scores_multi_threaded(conns.session)
+            with scoped_session_context_manager(conns.scoped_session_class) as session:
+                creates.fill_prices_for_raw_furu_positions(session)
+                calculates.update_furu_scores_multi_threaded(session)
         else:
             print("Skipped.")
 
@@ -57,7 +60,7 @@ class CLIActions:
     def print_golden_portfolio(conns: SessionConnections):
         from rankr.scripts.analytics.print_golden_portfolio import get_golden_portfolio
 
-        golden_folio = get_golden_portfolio(conns.session)
+        golden_folio = get_golden_portfolio(conns.scoped_session_class())
         print(
             golden_folio.head(30).to_string(
                 columns=["position", "symbol", "golden_rank"], index=False
@@ -68,7 +71,7 @@ class CLIActions:
     def print_leaderboard(conns: SessionConnections):
         from rankr.scripts.analytics.print_leaderboard import get_leaderboard
 
-        df = get_leaderboard(conns.session)
+        df = get_leaderboard(conns.scoped_session_class())
         print(
             df[
                 [
@@ -89,7 +92,7 @@ class CLIActions:
             get_best_trades_print_string,
         )
 
-        string = get_best_trades_print_string(conns.session)
+        string = get_best_trades_print_string(conns.scoped_session_class())
         print(string)
 
     @staticmethod

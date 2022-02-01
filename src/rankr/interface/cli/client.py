@@ -27,7 +27,7 @@ class CLIClient:
     def __init__(self):
         self.factory = FunctionFactory
         self.conns = SessionConnections(
-            session=create_db_scoped_session()(),
+            scoped_session_class=create_db_scoped_session(),
             tweepy=instantiate_api_session_from_cfg(),
         )
 
@@ -49,7 +49,7 @@ class CLIClient:
         if func:
             func(self.conns)
         print("\n")
-        self.conns.session.close()
+        self.conns.scoped_session_class.remove()
 
 
 if __name__ == "__main__":

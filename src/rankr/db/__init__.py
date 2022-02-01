@@ -1,9 +1,12 @@
 import os
 import pathlib
+from contextlib import contextmanager
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, scoped_session, sessionmaker
+from sqlalchemy.orm import Session, scoped_session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
+
 
 DB_PATH = pathlib.Path(os.getcwd()).joinpath("rankr").joinpath("db")
 
@@ -45,4 +48,22 @@ def create_db_scoped_session(echo: bool = False) -> scoped_session:
         echo=echo,
         poolclass=QueuePool,
     )
-    return scoped_session(sessionmaker(bind=engine))
+    session_maker = sessionmaker(bind=engine)
+    return scoped_session(session_maker)
+
+
+@contextmanager
+def scoped_session_context_manager(scoped_session_class: scoped_session):
+    """Provide a transactional scope around a series of operations."""
+    class SQLRollBackException(Exception):
+        pass
+
+    session = scoped_session_class()
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise SQLRollBackException("Rolling back changes as except clause triggered")
+    finally:
+        session.close()

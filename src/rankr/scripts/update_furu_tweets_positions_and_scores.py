@@ -17,6 +17,7 @@ from rankr.actions.calculates import (
 )
 from rankr.db.models import Furu
 
+
 logger = get_logger()
 
 BATCH_SIZE = 50
@@ -85,19 +86,19 @@ if __name__ == "__main__":
     dbsess = Session()
     api = instantiate_api_session_from_cfg()
 
-    furus = [
-        furu
+    furu_id_list = [
+        furu.id
         for furu in dbsess.query(Furu).all()
         if furu.status == Furu.Status.ACTIVE
         and (furu.date_last_updated is None or furu.date_last_updated < dt.date.today())
     ]
 
     v = input(
-        f"Will update tweets and scores {len(furus)} FURUs. Are you sure? (Y/N)\n"
+        f"Will update tweets and scores {len(furu_id_list)} FURUs. Are you sure? (Y/N)\n"
     )
     if v.upper() == "Y":
         furus = update_furu_tweets_positions_scores_multi_threaded(
-            api, dbsess, furus, workers=4
+            api, Session, furu_id_list, workers=4
         )
         print(f"Updated {len(furus)} FURUs.")
     else:

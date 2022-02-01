@@ -3,11 +3,12 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 import yfinance
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, scoped_session
 from structlog import get_logger
 from tweepy import API
 
 from rankr.actions.finds import get_nearest_business_day_in_future
+from rankr.db import scoped_session_context_manager
 from rankr.db.models import (
     Furu,
     FuruTicker,
@@ -34,10 +35,18 @@ def populate_ticker_history_from_yf(ticker: Ticker, yf_history: pd.DataFrame):
     for tup in yf_history_tuples:
         ticker_history = TickerHistory(
             date=tup.Index.date(),
-            high=tup.High if tup.High > Ticker.MINIMUM_OTC_PRICE else Ticker.MINIMUM_OTC_PRICE,
-            low=tup.Low if tup.Low > Ticker.MINIMUM_OTC_PRICE else Ticker.MINIMUM_OTC_PRICE,
-            close=tup.Close if tup.Close > Ticker.MINIMUM_OTC_PRICE else Ticker.MINIMUM_OTC_PRICE,
-            open=tup.Open if tup.Open > Ticker.MINIMUM_OTC_PRICE else Ticker.MINIMUM_OTC_PRICE,
+            high=tup.High
+            if tup.High > Ticker.MINIMUM_OTC_PRICE
+            else Ticker.MINIMUM_OTC_PRICE,
+            low=tup.Low
+            if tup.Low > Ticker.MINIMUM_OTC_PRICE
+            else Ticker.MINIMUM_OTC_PRICE,
+            close=tup.Close
+            if tup.Close > Ticker.MINIMUM_OTC_PRICE
+            else Ticker.MINIMUM_OTC_PRICE,
+            open=tup.Open
+            if tup.Open > Ticker.MINIMUM_OTC_PRICE
+            else Ticker.MINIMUM_OTC_PRICE,
             volume=tup.Volume,
         )
         ticker.ticker_history.append(ticker_history)
@@ -477,7 +486,9 @@ def fill_prices_for_raw_furu_positions(session: Session) -> bool:
         session, price_pending_positions_dict, prices
     )
 
-    fill_position_prices_from_df_serial(session, price_pending_positions_dict, ticker_objects_list)
+    fill_position_prices_from_df_serial(
+        session, price_pending_positions_dict, ticker_objects_list
+    )
 
     return True
 
@@ -620,18 +631,22 @@ def evaluate_error_tickers_reactivation(dbsess):
             dbsess.commit()
 
 
-def update_furu_tweets_and_create_raw_positions(tuple_data: (API, Furu)) -> Furu:
+def update_furu_tweets_and_create_raw_positions(
+    tuple_data: (scoped_session, API, int)
+) -> Furu:
     logger.info(f"Comprehensively raw updating {tuple_data[1]}")
-    tweepy_session, furu = tuple_data
-    # update their tweets with most recent tweets
-    from rankr.actions.calculates import update_furu_with_latest_tweets
+    scoped_session, tweepy_session, furu_id = tuple_data
+    with scoped_session_context_manager(scoped_session) as session:
+        furu = session.query(Furu).get(furu_id)
+        # update their tweets with most recent tweets
+        from rankr.actions.calculates import update_furu_with_latest_tweets
 
-    update_furu_with_latest_tweets((tweepy_session, furu))
-    # update their positions based on these tweets without invoking the yfinance API also close silenced ones
-    has_new_positions = create_raw_furu_positions_with_new_tweets(furu)
+        update_furu_with_latest_tweets((tweepy_session, furu))
+        # update their positions based on these tweets without invoking the yfinance API also close silenced ones
+        has_new_positions = create_raw_furu_positions_with_new_tweets(furu)
 
-    furu.date_last_updated = (
-        dt.date.today() if has_new_positions else furu.date_last_updated
-    )
+        furu.date_last_updated = (
+            dt.date.today() if has_new_positions else furu.date_last_updated
+        )
 
     return furu
