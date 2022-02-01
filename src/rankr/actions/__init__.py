@@ -1,11 +1,11 @@
-import os
 import pathlib
 
 import tweepy
 import yaml
 from tweepy import API
 
-PROJECT_PATH = os.path.dirname(os.getcwd())
+
+PROJECT_PATH = pathlib.Path(__file__).parent.parent.parent.parent
 SETUP_PATH = pathlib.Path(PROJECT_PATH).joinpath("setup")
 
 

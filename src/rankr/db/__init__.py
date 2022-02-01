@@ -1,4 +1,3 @@
-import os
 import pathlib
 from contextlib import contextmanager
 
@@ -9,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
 
 
-DB_PATH = pathlib.Path(os.getcwd()).joinpath("rankr").joinpath("db")
+DB_PATH = pathlib.Path(__file__).parent.parent.parent.parent.joinpath("db", "fururankr.db")
 
 
 logger = structlog.get_logger()
@@ -17,7 +16,7 @@ logger = structlog.get_logger()
 
 def create_db_session_from_cfg(echo: bool = False) -> Session:
     engine = create_engine(
-        url=f"sqlite:///{DB_PATH.joinpath('fururankr.db')}",
+        url=f"sqlite:///{DB_PATH}",
         connect_args={"check_same_thread": False},
         echo=echo,
     )
@@ -47,7 +46,7 @@ def create_db_scoped_session(echo: bool = False) -> scoped_session:
     https://coderedirect.com/questions/246376/sqlalchemy-proper-session-handling-in-multi-thread-applications
     """
     engine = create_engine(
-        url=f"sqlite:///{DB_PATH.joinpath('fururankr.db')}",
+        url=f"sqlite:///{DB_PATH}",
         connect_args={"check_same_thread": False},
         echo=echo,
         poolclass=QueuePool,

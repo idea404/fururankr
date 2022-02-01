@@ -18,6 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship
 from structlog import get_logger
 
+from rankr.db import DB_PATH
 from rankr.db.mixins import MixIn
 
 Base = declarative_base()
@@ -711,5 +712,5 @@ class TickerHistoryMissingError(Exception):
 
 
 if __name__ == "__main__":
-    engine = create_engine("sqlite:///fururankr.db", echo=True)
+    engine = create_engine(f"sqlite:///{DB_PATH}", echo=True)
     Base.metadata.create_all(engine)
