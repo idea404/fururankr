@@ -1,6 +1,4 @@
 # folders
 .idea
-
-# files
-setup/config.yaml
-setup/keys.yaml
+setup
+tmp

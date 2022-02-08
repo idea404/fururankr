@@ -21,6 +21,7 @@ from structlog import get_logger
 from rankr.db import DB_PATH
 from rankr.db.mixins import MixIn
 
+
 Base = declarative_base()
 metadata = Base.metadata
 
@@ -282,7 +283,7 @@ class Ticker(Base, MixIn):
         "TickerFetchFailure", backref="ticker"
     )
     ticker_history: List["TickerHistory"] = relationship(
-        "TickerHistory", back_populates="ticker"
+        "TickerHistory", back_populates="ticker", order_by="TickerHistory.date"
     )
     positions: List["FuruTicker"] = relationship("FuruTicker", back_populates="ticker")
 
@@ -299,6 +300,14 @@ class Ticker(Base, MixIn):
 
     def __repr__(self):
         return str(self)
+
+    @property
+    def max_ticker_history_date(self) -> dt.date:
+        return self.ticker_history[-1].date
+
+    @property
+    def min_ticker_history_date(self) -> dt.date:
+        return self.ticker_history[0].date
 
     def get_history_at_date(self, date: dt.date) -> Optional["TickerHistory"]:
         matching_histories = [h for h in self.ticker_history if h.date == date]
@@ -339,11 +348,10 @@ class Ticker(Base, MixIn):
         return None
 
     def add_df_to_history(self, df: pd.DataFrame):
-        ticker_history_dates = [h.date for h in self.ticker_history]
         yf_history_tuples = [
             yt
             for yt in df.itertuples()
-            if yt.Index.date() not in ticker_history_dates
+            if yt.Index.date() < self.min_ticker_history_date or self.max_ticker_history_date < yt.Index.date()
             and yt.Close >= self.MINIMUM_PRICE
             and yt.Open >= self.MINIMUM_PRICE
         ]

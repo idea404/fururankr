@@ -1,7 +1,7 @@
 from rankr.actions import instantiate_api_session_from_cfg
 from rankr.db import create_db_scoped_session
-from rankr.interface.cli.connections import SessionConnections
-from rankr.interface.cli.helper_classes import FunctionFactory
+from rankr.interfaces.cli.connections import SessionConnections
+from rankr.interfaces.cli.helper_classes import FunctionFactory
 
 
 class CLIClient:

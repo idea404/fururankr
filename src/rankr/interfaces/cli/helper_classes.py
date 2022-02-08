@@ -2,7 +2,7 @@ from typing import Callable, Optional
 
 from rankr.actions import calculates, finds, creates
 from rankr.db import scoped_session_context_manager
-from rankr.interface.cli.connections import SessionConnections
+from rankr.interfaces.cli.connections import SessionConnections
 
 
 class CLIActions:
