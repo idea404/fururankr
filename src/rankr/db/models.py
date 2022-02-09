@@ -302,6 +302,10 @@ class Ticker(Base, MixIn):
         return str(self)
 
     @property
+    def has_ticker_history(self) -> bool:
+        return self.ticker_history != []
+
+    @property
     def max_ticker_history_date(self) -> dt.date:
         return self.ticker_history[-1].date
 
@@ -351,10 +355,15 @@ class Ticker(Base, MixIn):
         yf_history_tuples = [
             yt
             for yt in df.itertuples()
-            if yt.Index.date() < self.min_ticker_history_date or self.max_ticker_history_date < yt.Index.date()
-            and yt.Close >= self.MINIMUM_PRICE
-            and yt.Open >= self.MINIMUM_PRICE
+            if yt.Close >= self.MINIMUM_PRICE and yt.Open >= self.MINIMUM_PRICE
         ]
+        if self.has_ticker_history:
+            yf_history_tuples = [
+                t
+                for t in yf_history_tuples
+                if t.Index.date() < self.min_ticker_history_date
+                or self.max_ticker_history_date < t.Index.date()
+            ]
         if yf_history_tuples:
             logger.info(f"Adding {len(yf_history_tuples)} rows of history to {self}")
             for tup in yf_history_tuples:
