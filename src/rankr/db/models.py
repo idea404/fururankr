@@ -198,8 +198,10 @@ class Furu(Base, MixIn):
     @property
     def has_new_furu_tweets(self) -> bool:
         if self.furu_tweets:
+            if self.date_last_updated is None:
+                return True
             ft = self.furu_tweets[-1]
-            if self.date_last_updated is None or (
+            if (
                 ft.tweets_max_date is not None
                 and ft.tweets_max_date >= self.date_last_updated
             ):
