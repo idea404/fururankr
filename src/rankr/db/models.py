@@ -279,11 +279,14 @@ class Ticker(Base, MixIn):
     date_last_updated = Column(Date, server_default=text("null"))
     status = Column(Enum(*Status), nullable=False, server_default=text("'ACTV'"))
 
+    max_ticker_history_date = Column(Date, server_default=text("null"))
+    min_ticker_history_date = Column(Date, server_default=text("null"))
+
     last_fetch_failure_dates: List["TickerFetchFailure"] = relationship(
         "TickerFetchFailure", backref="ticker"
     )
     ticker_history: List["TickerHistory"] = relationship(
-        "TickerHistory", back_populates="ticker", order_by="TickerHistory.date"
+        "TickerHistory", order_by="TickerHistory.date", lazy="dynamic"
     )
     positions: List["FuruTicker"] = relationship("FuruTicker", back_populates="ticker")
 
@@ -304,14 +307,6 @@ class Ticker(Base, MixIn):
     @property
     def has_ticker_history(self) -> bool:
         return self.ticker_history != []
-
-    @property
-    def max_ticker_history_date(self) -> dt.date:
-        return self.ticker_history[-1].date
-
-    @property
-    def min_ticker_history_date(self) -> dt.date:
-        return self.ticker_history[0].date
 
     def get_history_at_date(self, date: dt.date) -> Optional["TickerHistory"]:
         matching_histories = [h for h in self.ticker_history if h.date == date]
@@ -366,6 +361,7 @@ class Ticker(Base, MixIn):
             ]
         if yf_history_tuples:
             logger.info(f"Adding {len(yf_history_tuples)} rows of history to {self}")
+            min_date, max_date = yf_history_tuples[0].Index.date(), yf_history_tuples[0].Index.date()
             for tup in yf_history_tuples:
                 ticker_history = TickerHistory(
                     date=tup.Index.date(),
@@ -376,7 +372,11 @@ class Ticker(Base, MixIn):
                     volume=tup.Volume,
                 )
                 self.ticker_history.append(ticker_history)
+                min_date = min(min_date, tup.Index.date())
+                max_date = max(max_date, tup.Index.date())
             self.date_last_updated = dt.date.today()
+            self.min_ticker_history_date = min_date if not self.min_ticker_history_date else min(self.min_ticker_history_date, min_date)
+            self.max_ticker_history_date = max_date if not self.max_ticker_history_date else max(self.max_ticker_history_date, max_date)
 
     def register_data_fetch_fail(self):
         logger.info(f"Registering fail data fetch date for {self}")
@@ -653,8 +653,6 @@ class TickerHistory(Base, MixIn):
     close = Column(Float, server_default=text("null"))
     low = Column(Float, server_default=text("null"))
     volume = Column(Integer, server_default=text("null"))
-
-    ticker = relationship("Ticker", back_populates="ticker_history")
 
     def __init__(
         self,

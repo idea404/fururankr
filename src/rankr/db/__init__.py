@@ -56,9 +56,9 @@ def create_db_scoped_session(echo: bool = False) -> scoped_session:
 
 
 @contextmanager
-def scoped_session_context_manager(scoped_session_class: scoped_session):
+def scoped_session_context_manager(scoped_session_class: scoped_session = create_db_scoped_session()) -> Session:
     """Provide a transactional scope around a series of operations."""
-    session = scoped_session_class()
+    session: Session = scoped_session_class()
     try:
         yield session
         session.commit()
