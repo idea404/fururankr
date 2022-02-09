@@ -2,7 +2,7 @@ import collections
 import datetime as dt
 import unittest
 
-from rankr.actions.creates import fill_position_prices_from_df_serial
+from rankr.actions.creates import fill_position_prices_from_tickers
 from rankr.db.models import (
     Ticker,
     FuruTicker,
@@ -129,7 +129,7 @@ class TestCreatesFunctions(unittest.TestCase):
             ]
         )
 
-        fill_position_prices_from_df_serial(self.session, pppd, tol)
+        fill_position_prices_from_tickers(self.session, pppd, tol)
 
         self.assertEqual(dt.date(2021, 1, 20), positions[0].date_entered)
         self.assertEqual(1.1, positions[0].price_entered)

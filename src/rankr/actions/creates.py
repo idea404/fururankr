@@ -486,14 +486,12 @@ def fill_prices_for_raw_furu_positions(session: Session) -> bool:
         session, price_pending_positions_dict, prices
     )
 
-    fill_position_prices_from_df_serial(
-        session, price_pending_positions_dict, ticker_objects_list
-    )
+    fill_position_prices_from_tickers(session, price_pending_positions_dict, ticker_objects_list)
 
     return True
 
 
-def fill_position_prices_from_df_serial(
+def fill_position_prices_from_tickers(
     session,
     price_pending_positions_dict,
     ticker_objects_list,
@@ -527,11 +525,14 @@ def get_or_create_tickers_from_positions_dict_with_prices_df(
     existing_db_tickers_dict = {t.symbol: t for t in session.query(Ticker).all()}
     ticker_objects_list = []
     for i, symbol in enumerate(price_pending_positions_dict.keys()):
-        ticker_objects_list.append(
-            create_ticker_if_new_from_symbol_and_df(
-                session, symbol, prices_by_symbol_df[symbol], existing_db_tickers_dict
+        try:
+            ticker_objects_list.append(
+                create_ticker_if_new_from_symbol_and_df(
+                    session, symbol, prices_by_symbol_df[symbol], existing_db_tickers_dict
+                )
             )
-        )
+        except Exception as ex:
+            logger.exception(f"Failed to create ticker if new from symbol and df. Reason: {ex}")
         if i > 0 and i % commit_batch_size == 0:
             session.commit()
     if price_pending_positions_dict:

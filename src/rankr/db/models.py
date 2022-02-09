@@ -354,7 +354,7 @@ class Ticker(Base, MixIn):
             for yt in df.itertuples()
             if yt.Close >= self.MINIMUM_PRICE and yt.Open >= self.MINIMUM_PRICE
         ]
-        if self.has_ticker_history:
+        if self.min_ticker_history_date and self.max_ticker_history_date:
             yf_history_tuples = [
                 t
                 for t in yf_history_tuples
