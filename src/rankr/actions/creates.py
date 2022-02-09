@@ -634,10 +634,10 @@ def evaluate_error_tickers_reactivation(dbsess):
 def update_furu_tweets_and_create_raw_positions(
     tuple_data: (scoped_session, API, int)
 ) -> Furu:
-    logger.info(f"Comprehensively raw updating {tuple_data[1]}")
     scoped_session, tweepy_session, furu_id = tuple_data
     with scoped_session_context_manager(scoped_session) as session:
         furu = session.query(Furu).get(furu_id)
+        logger.info(f"Comprehensively raw updating {furu}")
         # update their tweets with most recent tweets
         from rankr.actions.calculates import update_furu_with_latest_tweets
 
