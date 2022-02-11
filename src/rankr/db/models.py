@@ -15,7 +15,7 @@ from sqlalchemy import (
     create_engine,
     text,
 )
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import declarative_base, relationship, Session
 from structlog import get_logger
 
 from rankr.db import DB_PATH
@@ -300,7 +300,7 @@ class Ticker(Base, MixIn):
         return (
             f"Ticker ${self.symbol} "
             f"[last updated: "
-            f"{self.date_last_updated.strftime('%Y-%m-%d') if self.date_last_updated is not None else None}]"
+            f"{self.date_last_updated.strftime('%Y-%m-%d') if self.date_last_updated else None}]"
         )
 
     def __repr__(self):
@@ -359,7 +359,10 @@ class Ticker(Base, MixIn):
             ]
         if yf_history_tuples:
             logger.info(f"Adding {len(yf_history_tuples)} rows of history to {self}")
-            min_date, max_date = yf_history_tuples[0].Index.date(), yf_history_tuples[0].Index.date()
+            min_date, max_date = (
+                yf_history_tuples[0].Index.date(),
+                yf_history_tuples[0].Index.date(),
+            )
             for tup in yf_history_tuples:
                 ticker_history = TickerHistory(
                     date=tup.Index.date(),

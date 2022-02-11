@@ -1,4 +1,5 @@
 TODOs
-1. Speed up price gathering process
+1. Speed up price assigning process
+1. Serialize saving furu tweets and creating raw positions
 2. figure how to handle positions where data can not be found
 5. configure logs to save log files in logs
