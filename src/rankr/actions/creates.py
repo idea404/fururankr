@@ -650,4 +650,4 @@ def update_furu_tweets_and_create_raw_positions(
             dt.date.today() if has_new_positions else furu.date_last_updated
         )
 
-    return furu
+        return furu
