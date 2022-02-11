@@ -288,7 +288,7 @@ class Ticker(Base, MixIn):
         "TickerFetchFailure", backref="ticker"
     )
     ticker_history: List["TickerHistory"] = relationship(
-        "TickerHistory", order_by="TickerHistory.date", lazy="dynamic"
+        "TickerHistory", order_by="TickerHistory.date"
     )
     positions: List["FuruTicker"] = relationship("FuruTicker", back_populates="ticker")
 
@@ -305,10 +305,6 @@ class Ticker(Base, MixIn):
 
     def __repr__(self):
         return str(self)
-
-    @property
-    def has_ticker_history(self) -> bool:
-        return self.ticker_history != []
 
     def get_history_at_date(self, date: dt.date) -> Optional["TickerHistory"]:
         matching_histories = [h for h in self.ticker_history if h.date == date]
