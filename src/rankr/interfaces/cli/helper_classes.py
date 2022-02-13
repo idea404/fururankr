@@ -56,7 +56,7 @@ class CLIActions:
     def print_golden_portfolio(conns: SessionConnections):
         from rankr.scripts.analytics.print_golden_portfolio import get_golden_portfolio
 
-        golden_folio = get_golden_portfolio(conns.scoped_session_class())
+        golden_folio = get_golden_portfolio(conns.session)
         print(
             golden_folio.head(30).to_string(
                 columns=["position", "symbol", "golden_rank"], index=False
@@ -67,7 +67,7 @@ class CLIActions:
     def print_leaderboard(conns: SessionConnections):
         from rankr.scripts.analytics.print_leaderboard import get_leaderboard
 
-        df = get_leaderboard(conns.scoped_session_class())
+        df = get_leaderboard(conns.session)
         print(
             df[
                 [
@@ -88,7 +88,7 @@ class CLIActions:
             get_best_trades_print_string,
         )
 
-        string = get_best_trades_print_string(conns.scoped_session_class())
+        string = get_best_trades_print_string(conns.session)
         print(string)
 
     @staticmethod
