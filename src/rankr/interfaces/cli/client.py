@@ -1,5 +1,5 @@
 from rankr.actions import instantiate_api_session_from_cfg
-from rankr.db import create_db_scoped_session
+from rankr.db import create_db_session_from_cfg
 from rankr.interfaces.cli.connections import SessionConnections
 from rankr.interfaces.cli.helper_classes import FunctionFactory
 
@@ -27,7 +27,7 @@ class CLIClient:
     def __init__(self):
         self.factory = FunctionFactory
         self.conns = SessionConnections(
-            scoped_session_class=create_db_scoped_session(),
+            session=create_db_session_from_cfg(),
             tweepy=instantiate_api_session_from_cfg(),
         )
 
@@ -49,7 +49,7 @@ class CLIClient:
         if func:
             func(self.conns)
         print("\n")
-        self.conns.scoped_session_class.remove()
+        self.conns.session.close()
 
 
 if __name__ == "__main__":

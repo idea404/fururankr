@@ -230,6 +230,35 @@ class Furu(Base, MixIn):
                 return max_date
         return Furu.FETCH_TWEET_HISTORY_CUTOFF_DATE
 
+    def add_new_tweets(self, new_tweets: list) -> list:
+        logger.info(
+            f"Determining new tweets from {len(new_tweets)} tweets for addition for {self}"
+        )
+        if self.furu_tweets:
+            existing_furu_tweets: List[FuruTweet] = self.furu_tweets
+            existing_tweet_ids = [
+                tweet.id
+                for furu_tweet in existing_furu_tweets
+                for tweet in furu_tweet.tweets
+            ]
+            new_tweets = [
+                tweet
+                for tweet in new_tweets
+                if tweet.id not in existing_tweet_ids
+            ]
+        else:
+            new_tweets = new_tweets
+
+        if new_tweets:
+            furu_tweet = FuruTweet(tweets=new_tweets)
+            furu_tweet.tweets_max_date = furu_tweet.tweets[0].created_at.date()
+            furu_tweet.tweets_min_date = furu_tweet.tweets[-1].created_at.date()
+            furu_tweet.tweets_min_id = furu_tweet.tweets[-1].id
+            furu_tweet.tweets_max_id = furu_tweet.tweets[0].id
+            self.furu_tweets.append(furu_tweet)
+            logger.info(f"Saved {len(new_tweets)} tweets in {furu_tweet}")
+            self.date_last_updated = dt.date.today()
+
     def register_data_fetch_fail(self):
         logger.info(f"Registering fail data fetch date for {self}")
         fetch_failure = FuruFetchFailure(fetch_failure_date=dt.date.today())

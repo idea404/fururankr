@@ -1,10 +1,10 @@
 import dataclasses
 
-from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import Session
 from tweepy import API
 
 
 @dataclasses.dataclass
 class SessionConnections:
-    scoped_session_class: scoped_session
+    session: Session
     tweepy: API

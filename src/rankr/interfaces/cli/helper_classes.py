@@ -12,9 +12,8 @@ class CLIActions:
             "Please type Twitter handles comma-separated (e.g. ZackMorris,DBTrades,FuruForLife)\n"
         )
         handles = [h.strip() for h in handles_str.split(",")]
-        with scoped_session_context_manager(conns.scoped_session_class) as session:
-            for handle in handles:
-                calculates.add_and_score_furu_from_handle(session, conns.tweepy, handle)
+        for handle in handles:
+            calculates.add_and_score_furu_from_handle(conns.session, conns.tweepy, handle)
 
     @staticmethod
     def add_furus_by_ticker_symbols(conns: SessionConnections):
@@ -22,24 +21,23 @@ class CLIActions:
             "Please type tickers separated by comma (e.g. AAPL,NFLX,TWTR)\n"
         )
         symbols = symbols_str.split(",")
-        with scoped_session_context_manager(conns.scoped_session_class) as session:
-            finds.find_validate_create_score_furus_for_tickers(
-                session, conns.tweepy, symbols
-            )
+        finds.find_validate_create_score_furus_for_tickers(
+            conns.session, conns.tweepy, symbols
+        )
 
     @staticmethod
     def update_furu_tweets_and_raw_positions(conns: SessionConnections):
-        scoped_session, tweepy = conns.scoped_session_class, conns.tweepy
-        with scoped_session_context_manager(scoped_session) as session:
-            creates.evaluate_error_furus_reactivation(session)
-            furu_id_list = finds.get_active_furu_ids(session)
+        session, tweepy = conns.session, conns.tweepy
+
+        creates.evaluate_error_furus_reactivation(session)
+        furus = finds.get_active_furus(session)
 
         v = input(
-            f"Will update all {len(furu_id_list)} furus with new tweets and raw positions. Are you sure? (Y/N)\n"
+            f"Will update all {len(furus)} furus with new tweets and raw positions. Are you sure? (Y/N)\n"
         )
         if v.upper() == "Y":
-            calculates.update_tweets_and_raw_positions_multi_threaded(
-                scoped_session, tweepy, furu_id_list
+            calculates.update_tweets_and_raw_positions_multi_threaded_io(
+                session, tweepy, furus
             )
         else:
             print("Skipped.")

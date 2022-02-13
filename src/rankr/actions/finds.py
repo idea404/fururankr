@@ -130,5 +130,5 @@ def get_furu_mentioned_tickers(furu: Furu, cutoff_date: dt.date = None) -> Set[s
     return mentioned_tickers
 
 
-def get_active_furu_ids(session) -> List[int]:
-    return [f.id for f in session.query(Furu).filter(Furu.status == Furu.Status.ACTIVE).all()]
+def get_active_furus(session) -> List[Furu]:
+    return session.query(Furu).filter(Furu.status == Furu.Status.ACTIVE).all()

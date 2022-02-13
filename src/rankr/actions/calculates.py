@@ -15,7 +15,7 @@ from rankr.actions.creates import (
     create_or_get_furu_position,
     fill_prices_for_raw_furu_positions,
     save_and_return_tweets_for_analysis,
-    update_furu_tweets_and_create_raw_positions,
+    create_raw_furu_positions_with_new_tweets,
 )
 from rankr.db import scoped_session_context_manager
 from rankr.db.models import Furu, FuruTicker, Ticker
@@ -278,7 +278,7 @@ def get_furu_tweet_validation_cutoff_date(furu: Optional[Furu]) -> dt.date:
 def get_new_tweets_for_handle(
     tweepy_session: API, handle: str, cutoff_date: dt.date = None
 ) -> list:
-    logger.info(f"Getting new tweets for @{handle} with cutoff date: {cutoff_date}")
+    logger.info(f"Fetching new tweets for @{handle} with cutoff date: {cutoff_date}")
     cutoff_date = cutoff_date or Furu.FETCH_TWEET_HISTORY_CUTOFF_DATE
     furu_tweets = [
         tweet
@@ -333,6 +333,29 @@ def update_furu_with_latest_tweets_and_score(
         logger.error(f"Failed to score {furu}. Reason: {ex}")
 
     return furu
+
+
+def fetch_new_furu_tweets(tweepy_session: API, furu: Furu) -> Optional[List]:
+    try:
+        cutoff_date = furu.get_tweets_cutoff_date()
+        new_furu_tweets = get_new_tweets_for_handle(
+            tweepy_session, furu.handle, cutoff_date
+        )
+        return {furu: new_furu_tweets}
+    except Exception as ex:
+        logger.warning(
+            f"Found error while getting data for {furu}. Will try again. Reason: {ex}"
+        )
+        try:
+            time.sleep(2)
+            cutoff_date = furu.get_tweets_cutoff_date()
+            new_furu_tweets = get_new_tweets_for_handle(
+                tweepy_session, furu.handle, cutoff_date
+            )
+            return {furu: new_furu_tweets}
+        except Exception as ex:
+            logger.error(f"Failed twice while getting data for {furu}. Reason: {ex}")
+            return {furu: None}
 
 
 def update_furu_with_latest_tweets(tuple_data: (API, Furu)) -> Furu:
@@ -392,7 +415,7 @@ def update_furu_tweets_positions_scores_multi_threaded(
     workers=4,
 ) -> List[Furu]:
     """Fast-performing function for bulk update of Furu data"""
-    update_tweets_and_raw_positions_multi_threaded(
+    update_tweets_and_raw_positions_multi_threaded_io(
         scoped_session_class=scoped_session_class,
         tweepy_session=tweepy_session,
         list_of_furu_ids=list_of_furu_ids,
@@ -415,14 +438,74 @@ def update_furu_scores_multi_threaded(dbsess: Session):
         exe.map(calculate_furu_performance, furus)
 
 
-def update_tweets_and_raw_positions_multi_threaded(
-    scoped_session_class, tweepy_session, list_of_furu_ids, workers=None
+def fetch_furu_tweets_multi_threaded(
+    tweepy_session, list_of_furus, workers
+) -> dict[Furu, list | None]:
+    jobs = []
+    with cf.ThreadPoolExecutor(max_workers=workers) as exe:
+        for furu in list_of_furus:
+            jobs.append(
+                exe.submit(
+                    fetch_new_furu_tweets,
+                    tweepy_session=tweepy_session,
+                    furu=furu,
+                )
+            )
+
+    results = {}
+    for job in cf.as_completed(jobs):
+        results.update(job.result())
+
+    return results
+
+
+def add_new_tweets_to_furus(
+    session: Session, new_furu_tweets_by_furu: dict[Furu, list | None]
+) -> list[Furu]:
+    counter = 0
+    for furu, new_tweets in new_furu_tweets_by_furu.items():
+        counter += 1
+        if new_tweets is None:
+            furu.register_data_fetch_fail()
+            continue
+        furu.add_new_tweets(new_tweets)
+        if counter % 100 == 0:
+            session.commit()
+
+    if new_furu_tweets_by_furu:
+        session.commit()
+
+    return list(new_furu_tweets_by_furu.keys())
+
+
+def update_tweets_and_raw_positions_multi_threaded_io(
+    session,
+    tweepy_session,
+    list_of_furus,
+    workers=None,
+    furu_batch_size=100,
 ):
     logger.info(
-        f"Updating tweets and raw positions for {len(list_of_furu_ids)} furus from Twitter"
+        f"Updating tweets and raw positions for {len(list_of_furus)} furus from Twitter"
     )
-    parallel_data = [
-        (scoped_session_class, tweepy_session, furu_id) for furu_id in list_of_furu_ids
-    ]
-    with cf.ThreadPoolExecutor(max_workers=workers) as exe:
-        exe.map(update_furu_tweets_and_create_raw_positions, parallel_data)
+
+    i, j = 0, furu_batch_size
+    while list_of_furus[i:]:
+        new_furu_tweets_by_furu = fetch_furu_tweets_multi_threaded(
+            tweepy_session, list_of_furus[i:j], workers
+        )
+        add_new_tweets_to_furus(session, new_furu_tweets_by_furu)
+        i, j = j, j + furu_batch_size
+
+    update_furus_raw_positions(session, list_of_furus)
+
+
+def update_furus_raw_positions(session: Session, furus: list[Furu], batch_commit_size=100):
+    i = 0
+    for furu in furus:
+        i += 1
+        create_raw_furu_positions_with_new_tweets(furu)
+        if i % batch_commit_size == 0:
+            session.commit()
+    if i:
+        session.commit()

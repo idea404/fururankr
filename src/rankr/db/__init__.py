@@ -69,5 +69,5 @@ def scoped_session_context_manager(scoped_session_class: scoped_session = create
         )
         raise
     finally:
-        # session.close()
-        pass  # allow SQLite to manage session closing when opening new sessions
+        session.close()
+        pass
