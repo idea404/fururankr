@@ -431,6 +431,15 @@ def update_furu_tweets_positions_scores_multi_threaded(
     return list_of_furu_ids
 
 
+def update_furu_scores(dbsess: Session):
+    furus = dbsess.query(Furu).filter(Furu.status == Furu.Status.ACTIVE).all()
+    logger.info(f"Updating scores for {len(furus)} furus closed positions")
+    for furu in furus:
+        calculate_furu_performance(furu)
+    if furus:
+        dbsess.commit()
+
+
 def update_furu_scores_multi_threaded(dbsess: Session):
     furus = dbsess.query(Furu).filter(Furu.status == Furu.Status.ACTIVE).all()
     logger.info(f"Updating scores for {len(furus)} furus closed positions")

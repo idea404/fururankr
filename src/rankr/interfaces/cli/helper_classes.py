@@ -1,7 +1,6 @@
 from typing import Callable, Optional
 
 from rankr.actions import calculates, finds, creates
-from rankr.db import scoped_session_context_manager
 from rankr.interfaces.cli.connections import SessionConnections
 
 
@@ -48,9 +47,8 @@ class CLIActions:
             "Will attempt to update raw pricing for all raw positions in DB. Are you sure?\n"
         )
         if v.upper() == "Y":
-            with scoped_session_context_manager(conns.scoped_session_class) as session:
-                creates.fill_prices_for_raw_furu_positions(session)
-                calculates.update_furu_scores_multi_threaded(session)
+            creates.fill_prices_for_raw_furu_positions(conns.session)
+            calculates.update_furu_scores(conns.session)
         else:
             print("Skipped.")
 
