@@ -12,18 +12,16 @@ from sqlalchemy import (
     Integer,
     PickleType,
     Text,
-    create_engine,
     text,
 )
-from sqlalchemy.orm import declarative_base, relationship, Session
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 from structlog import get_logger
 
-from rankr.db import DB_PATH
 from rankr.db.mixins import MixIn
 
 
 Base = declarative_base()
-metadata = Base.metadata
 
 logger = get_logger()
 
@@ -242,9 +240,7 @@ class Furu(Base, MixIn):
                 for tweet in furu_tweet.tweets
             ]
             new_tweets = [
-                tweet
-                for tweet in new_tweets
-                if tweet.id not in existing_tweet_ids
+                tweet for tweet in new_tweets if tweet.id not in existing_tweet_ids
             ]
         else:
             new_tweets = new_tweets
@@ -395,18 +391,34 @@ class Ticker(Base, MixIn):
             for tup in yf_history_tuples:
                 ticker_history = TickerHistory(
                     date=tup.Index.date(),
-                    high=tup.High if tup.High > self.MINIMUM_OTC_PRICE else self.MINIMUM_OTC_PRICE,
-                    low=tup.Low if tup.Low > self.MINIMUM_OTC_PRICE else self.MINIMUM_OTC_PRICE,
-                    close=tup.Close if tup.Close > self.MINIMUM_OTC_PRICE else self.MINIMUM_OTC_PRICE,
-                    open=tup.Open if tup.Open > self.MINIMUM_OTC_PRICE else self.MINIMUM_OTC_PRICE,
+                    high=tup.High
+                    if tup.High > self.MINIMUM_OTC_PRICE
+                    else self.MINIMUM_OTC_PRICE,
+                    low=tup.Low
+                    if tup.Low > self.MINIMUM_OTC_PRICE
+                    else self.MINIMUM_OTC_PRICE,
+                    close=tup.Close
+                    if tup.Close > self.MINIMUM_OTC_PRICE
+                    else self.MINIMUM_OTC_PRICE,
+                    open=tup.Open
+                    if tup.Open > self.MINIMUM_OTC_PRICE
+                    else self.MINIMUM_OTC_PRICE,
                     volume=tup.Volume,
                 )
                 self.ticker_history.append(ticker_history)
                 min_date = min(min_date, tup.Index.date())
                 max_date = max(max_date, tup.Index.date())
             self.date_last_updated = dt.date.today()
-            self.min_ticker_history_date = min_date if not self.min_ticker_history_date else min(self.min_ticker_history_date, min_date)
-            self.max_ticker_history_date = max_date if not self.max_ticker_history_date else max(self.max_ticker_history_date, max_date)
+            self.min_ticker_history_date = (
+                min_date
+                if not self.min_ticker_history_date
+                else min(self.min_ticker_history_date, min_date)
+            )
+            self.max_ticker_history_date = (
+                max_date
+                if not self.max_ticker_history_date
+                else max(self.max_ticker_history_date, max_date)
+            )
 
     def register_data_fetch_fail(self):
         logger.info(f"Registering fail data fetch date for {self}")
@@ -754,8 +766,3 @@ class TickerHistoryDataError(Exception):
 
 class TickerHistoryMissingError(Exception):
     pass
-
-
-if __name__ == "__main__":
-    engine = create_engine(f"sqlite:///{DB_PATH}", echo=True)
-    Base.metadata.create_all(engine)
