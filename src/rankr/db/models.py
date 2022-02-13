@@ -14,8 +14,7 @@ from sqlalchemy import (
     Text,
     text,
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, declarative_base
 from structlog import get_logger
 
 from rankr.db.mixins import MixIn
