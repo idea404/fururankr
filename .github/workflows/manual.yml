@@ -6,6 +6,8 @@ name: Manual workflow
 # or API.
 on:
   workflow_dispatch:
+  repository_dispatch:
+    - types: [foo]
     # Inputs the workflow accepts.
 #     inputs:
 #       name:
