@@ -7,8 +7,9 @@ name: Manual workflow
 on:
   workflow_dispatch:
   repository_dispatch:
-    - types: [foo]
-    # Inputs the workflow accepts.
+    types: [foo]
+
+# Inputs the workflow accepts.
 #     inputs:
 #       name:
 #         # Friendly description to be shown in the UI instead of 'name'
