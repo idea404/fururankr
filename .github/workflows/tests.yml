@@ -16,5 +16,5 @@ jobs:
         python-version: '3.10'
     - name: Install requirements
       run: pip install -r requirements.txt
-    - name: Run Tests
-      run: cd src && python -m unittest tests
+    - name: Run Unit Tests
+      run: cd src/tests && python -m unittest unit_tests
