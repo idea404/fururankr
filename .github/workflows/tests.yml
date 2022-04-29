@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
 jobs:
-  greet:
+  Tests:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Branch
@@ -17,4 +17,4 @@ jobs:
     - name: Install requirements
       run: pip install -r requirements.txt
     - name: Run Tests
-      run: cd src && python unittest -m tests
+      run: cd src && python -m unittest tests
