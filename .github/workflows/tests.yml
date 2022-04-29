@@ -17,4 +17,4 @@ jobs:
     - name: Install requirements
       run: pip install -r requirements.txt
     - name: Run Unit Tests
-      run: cd src/tests && python -m unittest unit_tests
+      run: cd src && python -m pytest tests
